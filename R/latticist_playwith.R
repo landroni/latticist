@@ -47,6 +47,31 @@ latticist_playwith <-
 }
 
 
+##`blockRedraws` imported from playwith 0.9-54
+##to avoid CRAN checks Warnings for `:::` calls
+blockRedraws <- function(expr, playState = playDevCur())
+{
+    oval <- playState$tmp$skip.redraws
+    playState$tmp$skip.redraws <- TRUE
+    da <- playState$widgets$drawingArea
+    daAlloc <- da$getAllocation()$allocation
+    da$setSizeRequest(daAlloc$width, daAlloc$height)
+                                        #playState$win$setGeometryHints(da, list(max.width=myW, min.width=myW,
+                                        #	max.height=myH, min.height=myH))
+                                        #da$window$freezeUpdates() # hmm
+    foo <- try(eval.parent(substitute(expr)))
+    ## try to force redraw
+    gdkWindowProcessAllUpdates()
+    while (gtkEventsPending()) gtkMainIterationDo(blocking=FALSE)
+
+                                        #da$window$thawUpdates()
+                                        #playState$win$setGeometryHints(da, list())
+    da$setSizeRequest(-1, -1)
+    playState$tmp$skip.redraws <- oval
+    foo
+}
+
+
 latticistToolConstructor <- function(dat, datArg)
 {
     ## this is the init.action
@@ -741,7 +766,7 @@ latticistToolConstructor <- function(dat, datArg)
 
         ## add it directly to the window (not a toolbar!)
         ## use blockRedraws() to maintain current device size
-        playwith:::blockRedraws({
+        blockRedraws({
             playState$widgets$vbox$packEnd(box, expand=FALSE)
         }, playState = playState)
 
